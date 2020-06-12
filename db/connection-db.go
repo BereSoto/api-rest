@@ -1,4 +1,4 @@
-package connectiondb
+package main
 
 import (
 	"database/sql"
@@ -19,23 +19,25 @@ func main() {
 	// Create the "accounts" table.
 
 	// Insert two rows into the "accounts" table.
-	if _, err := db.Exec(
-		"INSERT INTO servers (id, address, ssl_grade, country, owner, local_date) VALUES (1, 192.68.1.1, ), (2, 250)"); err != nil {
-		log.Fatal(err)
-	}
+	//if _, err := db.Exec(
+	//	"INSERT INTO servers (id, address, ssl_grade, country, owner) VALUES (1, '192.68.1.1', 'B', 'MX', 'Example.com, Inc.')"); err != nil {
+	//	log.Fatal(err)
+	//}
 
 	// Print out the balances.
-	rows, err := db.Query("SELECT id, balance FROM accounts")
+	rows, err := db.Query("SELECT * FROM servers")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
-	fmt.Println("Initial balances:")
+	fmt.Println("Prueba de datos")
 	for rows.Next() {
-		var id, balance int
-		if err := rows.Scan(&id, &balance); err != nil {
+		var id int
+		var address, ssl_grade, country, owner string
+
+		if err := rows.Scan(&id, &address, &ssl_grade, &country, &owner); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%d %d\n", id, balance)
+		fmt.Printf("el registro es: %d %s %s %s %s\n", id, address, ssl_grade, country, owner) // tipos de dato %d=digito o numero, %s= string
 	}
 }
