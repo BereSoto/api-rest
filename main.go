@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -118,7 +119,7 @@ func getSslAndServerInformation(domain string) (SSLLabsResponse, error) {
 	decoder := json.NewDecoder(res.Body)
 	decoderErr := decoder.Decode(&parsedResponse)
 	if decoderErr != nil {
-		log.Fatalf("Error procesando la respuesta de ssllabs %v", err)
+		return parsedResponse, err
 	}
 	// Cerramos la petición cuando haya sido leida la respuesta
 	defer res.Body.Close()
@@ -184,11 +185,11 @@ func insertIntoDomain(payload *DatabaseDomainRow) (DatabaseDomainRow, error) {
 	if err != nil {
 		return result, err
 	}
-	sqlSelectNewRecordStatement := `SELECT idm title, logo, host FROM domains WHERE ID = $1`
+	sqlSelectNewRecordStatement := `SELECT id title, logo, host FROM domains WHERE ID = $1`
 	err = db.QueryRow(sqlSelectNewRecordStatement, ID).Scan(
 		&result.ID,
-		&result.Logo,
 		&result.Title,
+		&result.Logo,
 		&result.Host)
 	if err != nil {
 		return result, err
@@ -272,9 +273,9 @@ func getRowFromDomainsByHost(domain string) (DatabaseDomainRow, error) {
 	if err := db.Ping(); err != nil {
 		return result, err
 	}
-	preparedStatement, prepareError := db.Prepare(sqlStatement)
+	preparedStatement, err := db.Prepare(sqlStatement)
 
-	if prepareError != nil {
+	if err != nil {
 		return result, err
 	}
 	err = preparedStatement.QueryRow(domain).Scan(&result.ID, &result.Host, &result.Title, &result.Logo)
@@ -311,7 +312,7 @@ func getLogoAndTitleFromDomain(domain string) (string, string, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		log.Fatalf("getLogoAndTitleFromDomain: status code error: %d %s", res.StatusCode, res.Status)
+		return logo, title, fmt.Errorf("getLogoAndTitleFromDomain: status code error: %d %s", res.StatusCode, res.Status)
 	}
 
 	// Load the HTML document
@@ -341,8 +342,8 @@ func getWhoisInfo(ipOrDomain string) (whoisResult, error) {
 	whoisString, err := whois.Whois(ipOrDomain)
 	if err != nil {
 		return result, err
-  }
-  // El parse no soporta ips https://github.com/likexian/whois-parser-go/issues/19
+	}
+	// El parse no soporta ips https://github.com/likexian/whois-parser-go/issues/19
 	parsed, err := whoisparser.Parse(whoisString)
 	if err != nil {
 		fmt.Printf("[getWhoisInfo] error: %s; rawWhois: \n%s\n", err.Error(), whoisString)
@@ -383,27 +384,23 @@ func getOrCreateServerDomainRecords(domain string) (DatabaseDomainRow, []Databas
 				return domainRecord, serverRecords, serversHasChanged, err
 			}
 		} else {
-			if err != nil {
-				return domainRecord, serverRecords, serversHasChanged, err
-			}
-
-		}
-	} else {
-		serverRecords, err = getRowsFromServersByDomainID(domainRecord.ID)
-		if err != nil {
 			return domainRecord, serverRecords, serversHasChanged, err
 		}
-		if len(serverRecords) > 0 {
-			serversHasChanged = true
-		}
+	}
+	serverRecords, err = getRowsFromServersByDomainID(domainRecord.ID)
+	if err != nil {
+		return domainRecord, serverRecords, serversHasChanged, err
+	}
+	if len(serverRecords) > 0 {
+		serversHasChanged = true
 	}
 	for _, endpoint := range sslInfo.Endpoints {
 		var serverPayload DatabaseServesRow
 		whoisData, err := getWhoisInfo(endpoint.IPAddress)
 		if err == nil {
-      // Si funcionó la petición y parseo de whois lo guardo, si no no me detengo
-      serverPayload.Owner = whoisData.owner
-      serverPayload.Country = whoisData.country
+			// Si funcionó la petición y parseo de whois lo guardo, si no no me detengo
+			serverPayload.Owner = whoisData.owner
+			serverPayload.Country = whoisData.country
 		}
 		serverPayload.Address = endpoint.IPAddress
 		serverPayload.DomainID = domainRecord.ID
