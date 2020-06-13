@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"database/sql"
 	"encoding/json"
 	"fmt"
