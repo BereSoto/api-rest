@@ -136,7 +136,7 @@ func boostrapAndGetDatabase() (*sql.DB, error) {
 	// Crea la tabla de servidores
 	_, err = db.Exec(
 		`CREATE TABLE IF NOT EXISTS servers (
-        id INT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         address STRING,
         ssl_grade STRING,
         country STRING,
@@ -150,7 +150,7 @@ func boostrapAndGetDatabase() (*sql.DB, error) {
 	// Crea la tabla de dominios
 	_, err = db.Exec(
 		`CREATE TABLE IF NOT EXISTS domains (
-        id INT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         title STRING,
         logo STRING,
         host STRING
@@ -184,7 +184,7 @@ func insertIntoDomain(payload *DatabaseDomainRow) (DatabaseDomainRow, error) {
 	if err != nil {
 		return result, err
 	}
-	sqlSelectNewRecordStatement := `SELECT title, logo, host FROM domains WHERE ID = $1`
+	sqlSelectNewRecordStatement := `SELECT idm title, logo, host FROM domains WHERE ID = $1`
 	err = db.QueryRow(sqlSelectNewRecordStatement, ID).Scan(
 		&result.ID,
 		&result.Logo,
@@ -275,7 +275,7 @@ func getRowFromDomainsByHost(domain string) (DatabaseDomainRow, error) {
 	if prepareError != nil {
 		return result, err
 	}
-	err = preparedStatement.QueryRow(domain).Scan(&result.ID, &result.Logo, &result.Title)
+	err = preparedStatement.QueryRow(domain).Scan(&result.ID, &result.Host, &result.Title, &result.Logo)
 	if err != nil {
 		return result, err
 	}
@@ -301,9 +301,9 @@ func getRowFromDomainsByID(ID int) (DatabaseDomainRow, error) {
 func getLogoAndTitleFromDomain(domain string) (string, string, error) {
 	var logo string
 	var title string
-  var err error
+	var err error
 	// Request the HTML page.
-	res, err := http.Get("https://"+domain)
+	res, err := http.Get("https://" + domain)
 	if err != nil {
 		return logo, title, err
 	}
@@ -340,9 +340,9 @@ func getWhoisInfo(ipOrDomain string) (whoisResult, error) {
 	if err != nil {
 		return result, err
 	}
-	fmt.Printf("rawWhois %s\n", whoisString)
 	parsed, err := whoisparser.Parse(whoisString)
 	if err != nil {
+		fmt.Printf("[getWhoisInfo] error: %s; rawWhois: \n%s\n", err.Error(), whoisString)
 		return result, err
 	}
 	fmt.Printf("parsedWhois %+v\n", parsed)
@@ -379,12 +379,12 @@ func getOrCreateServerDomainRecords(domain string) (DatabaseDomainRow, []Databas
 			if err != nil {
 				return domainRecord, serverRecords, serversHasChanged, err
 			}
-      } else {
-        if err != nil {
-          return domainRecord, serverRecords, serversHasChanged, err
-        }
+		} else {
+			if err != nil {
+				return domainRecord, serverRecords, serversHasChanged, err
+			}
 
-    }
+		}
 	} else {
 		serverRecords, err = getRowsFromServersByDomainID(domainRecord.ID)
 		if err != nil {
