@@ -196,12 +196,13 @@ func insertIntoDomain(payload *DatabaseDomainRow) (DatabaseDomainRow, error) {
 	return result, err
 }
 
-func insertIntoServer(payload *DatabaseServesRow) (DatabaseServesRow, error) {
+func insertIntoServer(payload DatabaseServesRow) (DatabaseServesRow, error) {
 	var ID int
 	var result DatabaseServesRow
 	var err error
-	sqlStatement := `INSERT INTO servers (address, ssl_grade, country, created_at, domain_id)
-    VALUES ($1, $2, $3, $4, $5, $7)
+	payload.CreatedAt = time.Now()
+	sqlStatement := `INSERT INTO servers (address, ssl_grade, country, owner, created_at, domain_id)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING ID`
 	fmt.Printf("insertIntoServer: Carga es %+v\n, SQL: %s\n", payload, sqlStatement)
 	err = db.QueryRow(
@@ -210,7 +211,7 @@ func insertIntoServer(payload *DatabaseServesRow) (DatabaseServesRow, error) {
 		payload.SslGrade,
 		payload.Country,
 		payload.Owner,
-		time.Now,
+		payload.CreatedAt,
 		payload.DomainID).Scan(&ID)
 	if err != nil {
 		return result, err
@@ -222,6 +223,7 @@ func insertIntoServer(payload *DatabaseServesRow) (DatabaseServesRow, error) {
 		&result.Address,
 		&result.SslGrade,
 		&result.Country,
+		&result.Owner,
 		&result.DomainID,
 		&result.CreatedAt)
 	if err != nil {
@@ -339,7 +341,8 @@ func getWhoisInfo(ipOrDomain string) (whoisResult, error) {
 	whoisString, err := whois.Whois(ipOrDomain)
 	if err != nil {
 		return result, err
-	}
+  }
+  // El parse no soporta ips https://github.com/likexian/whois-parser-go/issues/19
 	parsed, err := whoisparser.Parse(whoisString)
 	if err != nil {
 		fmt.Printf("[getWhoisInfo] error: %s; rawWhois: \n%s\n", err.Error(), whoisString)
@@ -395,16 +398,16 @@ func getOrCreateServerDomainRecords(domain string) (DatabaseDomainRow, []Databas
 		}
 	}
 	for _, endpoint := range sslInfo.Endpoints {
+		var serverPayload DatabaseServesRow
 		whoisData, err := getWhoisInfo(endpoint.IPAddress)
-		if err != nil {
-			return domainRecord, serverRecords, serversHasChanged, err
+		if err == nil {
+      // Si funcionó la petición y parseo de whois lo guardo, si no no me detengo
+      serverPayload.Owner = whoisData.owner
+      serverPayload.Country = whoisData.country
 		}
-		var serverPayload *DatabaseServesRow
 		serverPayload.Address = endpoint.IPAddress
 		serverPayload.DomainID = domainRecord.ID
 		serverPayload.SslGrade = endpoint.Grade
-		serverPayload.Owner = whoisData.owner
-		serverPayload.Country = whoisData.country
 		// TODO: Esto tiene que hacer un firstOrCreate para comparar correctamente
 		newRow, err := insertIntoServer(serverPayload)
 		if err != nil {
