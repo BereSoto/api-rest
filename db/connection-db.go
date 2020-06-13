@@ -16,13 +16,16 @@ func main() {
 	}
 	defer db.Close()
 
-	// Create the "accounts" table.
-
+  // Create the "accounts" table.
+    if _, err := db.Exec(
+        "CREATE TABLE IF NOT EXISTS servers (id INT PRIMARY KEY, address STRING, ssl_grade STRING, country STRING, owner STRING)"); err != nil {
+        log.Fatal(err)
+    }
 	// Insert two rows into the "accounts" table.
-	//if _, err := db.Exec(
-	//	"INSERT INTO servers (id, address, ssl_grade, country, owner) VALUES (1, '192.68.1.1', 'B', 'MX', 'Example.com, Inc.')"); err != nil {
-	//	log.Fatal(err)
-	//}
+	if _, err := db.Exec(
+		"INSERT INTO servers (id, address, ssl_grade, country, owner) VALUES (1, '192.68.1.1', 'B', 'MX', 'Example.com, Inc.')"); err != nil {
+		log.Fatal(err)
+	}
 
 	// Print out the balances.
 	rows, err := db.Query("SELECT * FROM servers")
