@@ -2,3 +2,4 @@
 api-rest
 # Bases de datos
 cockroach-data
+node_modules

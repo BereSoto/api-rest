@@ -1,0 +1,29 @@
+{
+  "name": "api-rest",
+  "version": "1.0.0",
+  "description": "Instalar dependencias",
+  "main": "index.js",
+  "scripts": {
+    "start:backend": "go run ./packages/backend/main.go",
+    "start:db": "cockroach start-single-node --insecure --listen-addr=localhost:26257 --http-addr=localhost:8005 --background",
+    "start:frontend": "pnpm m run serve",
+    "start": "pnpm run start:backend & pnpm run start:db & pnpm run start:frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BereSoto/api-rest.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BereSoto/api-rest/issues"
+  },
+  "homepage": "https://github.com/BereSoto/api-rest#readme",
+  "devDependencies": {
+    "eslint": "7.2.0",
+    "prettier": "2.0.5",
+    "typescript": "3.9.5",
+    "vue": "2.6.11"
+  }
+}
