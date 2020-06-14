@@ -2,6 +2,7 @@
   <div id="app">
     <img alt="Vue logo" src="./assets/logo.png">
     <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+		<pre>Voy a solicitar un push a {{endpoint}} /dominios con un body en json {"domain": "archive.org"}</pre>
   </div>
 </template>
 
@@ -13,7 +14,12 @@ export default Vue.extend({
   name: 'App',
   components: {
     HelloWorld
-  }
+	},
+	data() {
+		return {
+			endpoint: 'http://localhost:8081'
+		}
+	},
 });
 </script>
 
